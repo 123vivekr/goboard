@@ -32,17 +32,17 @@ func NewBoltScoreStore() *BoltScoreStore {
 		log.Fatal(err)
 	}
 
-	return &BoltScoreStore{sync.Mutex{}, *db}
+	return &BoltScoreStore{sync.RWMutex{}, *db}
 }
 
 type BoltScoreStore struct {
-	mu sync.Mutex
+	mu sync.RWMutex
 	db bolt.DB
 }
 
 func (b *BoltScoreStore) GetPlayerScore(name string) int {
-	b.mu.Lock()
-	defer b.mu.Unlock()
+	b.mu.RLock()
+	defer b.mu.RUnlock()
 
 	score := 0
 
@@ -60,11 +60,11 @@ func (b *BoltScoreStore) GetPlayerScore(name string) int {
 }
 
 func (b *BoltScoreStore) RecordWin(name string) {
-	// b.mu.Lock()
-	// defer b.mu.Unlock()
+	prev_score_string := b.GetPlayerScore(name)
 
+	b.mu.Lock()
+	defer b.mu.Unlock()
 	err := b.db.Update(func(tx *bolt.Tx) error {
-		prev_score_string := b.GetPlayerScore(name)
 		prev_score, _ := strconv.Atoi(fmt.Sprint(prev_score_string))
 
 		bucket := tx.Bucket([]byte(ScoreStoreBucketName))
