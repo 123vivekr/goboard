@@ -7,7 +7,7 @@ import (
 )
 
 func TestRecordingWinsAndRetrievingThem(t *testing.T) {
-	store := NewBoltScoreStore()
+	store := NewInMemoryScoreStore()
 	server := GoBoardServer{store}
 	player := "Pepper"
 
