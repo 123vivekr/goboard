@@ -1,17 +1,23 @@
 package main
 
-// func TestRecordingWinsAndRetrievingThem(t *testing.T) {
-// 	store := NewBoltScoreStore()
-// 	server := GoBoardServer{store}
-// 	player := "Pepper"
+import (
+	"net/http"
+	"net/http/httptest"
+	"testing"
+)
 
-// 	server.ServeHTTP(httptest.NewRecorder(), newPostWinRequest(player))
-// 	server.ServeHTTP(httptest.NewRecorder(), newPostWinRequest(player))
-// 	server.ServeHTTP(httptest.NewRecorder(), newPostWinRequest(player))
+func TestRecordingWinsAndRetrievingThem(t *testing.T) {
+	store := NewBoltScoreStore()
+	server := GoBoardServer{store}
+	player := "Pepper"
 
-// 	response := httptest.NewRecorder()
-// 	server.ServeHTTP(response, newGetScoreRequest(player))
-// 	assertStatus(t, response.Code, http.StatusOK)
+	server.ServeHTTP(httptest.NewRecorder(), newPostWinRequest(player))
+	server.ServeHTTP(httptest.NewRecorder(), newPostWinRequest(player))
+	server.ServeHTTP(httptest.NewRecorder(), newPostWinRequest(player))
 
-// 	assertResponseBody(t, response.Body.String(), "3")
-// }
+	response := httptest.NewRecorder()
+	server.ServeHTTP(response, newGetScoreRequest(player))
+	assertStatus(t, response.Code, http.StatusOK)
+
+	assertResponseBody(t, response.Body.String(), "3")
+}

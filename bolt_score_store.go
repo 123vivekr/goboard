@@ -32,12 +32,12 @@ func NewBoltScoreStore() *BoltScoreStore {
 		log.Fatal(err)
 	}
 
-	return &BoltScoreStore{sync.RWMutex{}, *db}
+	return &BoltScoreStore{sync.RWMutex{}, db}
 }
 
 type BoltScoreStore struct {
 	mu sync.RWMutex
-	db bolt.DB
+	db *bolt.DB
 }
 
 func (b *BoltScoreStore) GetPlayerScore(name string) int {

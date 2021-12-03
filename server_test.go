@@ -3,7 +3,6 @@ package main
 import (
 	"net/http"
 	"net/http/httptest"
-	"sync"
 	"testing"
 )
 
@@ -97,28 +96,6 @@ func TestStoreWins(t *testing.T) {
 
 		if store.winCalls[0] != player {
 			t.Errorf("did not store correct winner got %q want %q", store.winCalls[0], player)
-		}
-	})
-	t.Run("it runs safely concurrently", func(t *testing.T) {
-		wantedCount := 1000
-		player := "Bob"
-
-		request := newPostWinRequest(player)
-		response := httptest.NewRecorder()
-
-		var wg sync.WaitGroup
-		wg.Add(wantedCount)
-
-		for i := 0; i < wantedCount; i++ {
-			go func() {
-				defer wg.Done()
-				server.ServeHTTP(response, request)
-			}()
-		}
-		wg.Wait()
-
-		if len(store.winCalls) != wantedCount {
-			t.Errorf("got %d calls to RecordWin want %d", len(store.winCalls), wantedCount)
 		}
 	})
 }
