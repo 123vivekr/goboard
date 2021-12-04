@@ -3,25 +3,32 @@ package main
 import (
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 )
 
 type StubPlayerStore struct {
+	lock     sync.RWMutex
 	scores   map[string]int
 	winCalls []string
 }
 
 func (s *StubPlayerStore) GetPlayerScore(name string) int {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
 	score := s.scores[name]
 	return score
 }
 
 func (s *StubPlayerStore) RecordWin(name string) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	s.winCalls = append(s.winCalls, name)
 }
 
 func TestGETPlayers(t *testing.T) {
 	store := StubPlayerStore{
+		sync.RWMutex{},
 		map[string]int{
 			"Piper":   20,
 			"Hendrik": 10,
@@ -75,12 +82,14 @@ func assertResponseBody(t *testing.T, got string, want string) {
 }
 
 func TestStoreWins(t *testing.T) {
-	store := StubPlayerStore{
-		map[string]int{},
-		nil,
-	}
-	server := &GoBoardServer{&store}
 	t.Run("it records wins when POST", func(t *testing.T) {
+		store := StubPlayerStore{
+			sync.RWMutex{},
+			map[string]int{},
+			nil,
+		}
+		server := &GoBoardServer{&store}
+
 		player := "Popper"
 
 		request := newPostWinRequest(player)
@@ -96,6 +105,35 @@ func TestStoreWins(t *testing.T) {
 
 		if store.winCalls[0] != player {
 			t.Errorf("did not store correct winner got %q want %q", store.winCalls[0], player)
+		}
+	})
+	t.Run("it runs safely concurrently", func(t *testing.T) {
+		store := StubPlayerStore{
+			sync.RWMutex{},
+			map[string]int{},
+			nil,
+		}
+		server := &GoBoardServer{&store}
+
+		wantedCount := 100
+		player := "Bob"
+
+		var wg sync.WaitGroup
+		wg.Add(wantedCount)
+
+		for i := 0; i < wantedCount; i++ {
+			go func() {
+				defer wg.Done()
+
+				request := newPostWinRequest(player)
+				response := httptest.NewRecorder()
+				server.ServeHTTP(response, request)
+			}()
+		}
+		wg.Wait()
+
+		if len(store.winCalls) != wantedCount {
+			t.Errorf("got %d calls to RecordWin want %d", len(store.winCalls), wantedCount)
 		}
 	})
 }
